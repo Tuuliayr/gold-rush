@@ -8,32 +8,71 @@ import { getWalls } from './utils/walls.js'
 
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
+let move = false
 
 // Change this to your own implementation
 
-// 1. Check for walls. If no wall, move. If two walls missing side by side, move diagonally.
+// If two walls missing side by side, add possible direction to array.
+// If wall is in front of us, don't go back. So no 180 rotation, if more than one spot is open.
 // If path ends, compare used moves to reset.
+// Compare player location to target location before action.
 const generateAction = (gameState: NoWayOutState): Action => {
     const { player, square } = gameState
     const { rotation } = player
 
     const walls = getWalls(square)
 
-    // If there is a wall in front of us, rotate
-    if (walls[rotation]) {
-        // Pick a random direction with no wall
+    // Check directions in every square
+    if (!move) {
+        // Check directions with no wall
         const possibleDirections = Object.entries(walls)
         .filter(([_, wall]) => !wall)
-        .map(([rotation]) => parseInt(rotation) as Rotation)
-        const newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
+        .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
+
+        console.log("Possible directions")
+        console.log(possibleDirections)
+
+        let newRotation : Rotation
+
+        if (possibleDirections.length > 1) {
+            const tempDirections = possibleDirections
+
+            for (let i = 0; i < possibleDirections.length - 1; i++) {
+                if (possibleDirections[i + 1] - possibleDirections[i] === 90) {
+                    let diagonal = possibleDirections[i] + 45 as Rotation
+                    tempDirections.push(diagonal)
+                    tempDirections.sort((a, b) => a - b)
+                    console.log("TempDirections")
+                    console.log(tempDirections)
+                    console.log("Player position")
+                    console.log(gameState.player.position)
+                }
+            }
+
+            // example [0, 45, 90, 180]
+            
+            newRotation = tempDirections[Math.floor(Math.random() * tempDirections.length)]
+
+        } else {
+            // Only one possible direction. Go back or check if should reset?
+            newRotation = possibleDirections[0]
+            // console.log(possibleDirections)
+        }
+
+        // Get player and target locations. Calculate
+
+        move = !move
 
         return {
-        action: 'rotate',
-        rotation: newRotation || 0,
+            action: 'rotate',
+            rotation: newRotation || 0,
         }
+        
     } else {
+        move = !move
+
         return {
-        action: 'move',
+            action: 'move',
         }
     }
 }
