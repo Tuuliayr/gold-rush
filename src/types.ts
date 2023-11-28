@@ -66,6 +66,11 @@ export interface Messages {
       desc?: string
     }
 }
+
+export interface VisitedSquare {
+    position: Location;
+    possibleDirections: Rotation[];
+}
   
 export type AllowedActions = keyof Messages
 export type AllowedPayload<K extends AllowedActions> = Messages[K]
