@@ -9,7 +9,7 @@ import { getWalls } from './utils/walls.js'
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
 const routes: {locPlayer: Location, possibleDirections: Rotation[]}[] = []
-let move = false
+let previousAction: "move" | "rotate" = "move"
 
 const getVisitedSquare = (locPlayer: Location) => {
 
@@ -30,30 +30,32 @@ const generateAction = (gameState: NoWayOutState): Action => {
     const { player, square } = gameState
     const { rotation } = player
     const walls = getWalls(square)
+    const dirPlayer: Rotation = gameState.player.rotation
     const locPlayer: Location = gameState.player.position
     const locTarget = gameState.target
 
     // Check directions in every square
-    if (!move) {
-        const visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
-        let possibleDirections: Rotation[]
-        let newRotation: Rotation
-        console.log(visitedSquare)
+    const visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
+    let possibleDirections: Rotation[]
+    let newRotation: Rotation
+    console.log(visitedSquare)
 
-        if (visitedSquare !== undefined) {
-            possibleDirections = visitedSquare.possibleDirections
-        } else {
-            // Check directions with no wall
-            possibleDirections = Object.entries(walls)
-            .filter(([_, wall]) => !wall)
-            .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
+    if (visitedSquare !== undefined) {
+        possibleDirections = visitedSquare.possibleDirections
+    } else {
+        // Check directions with no wall
+        possibleDirections = Object.entries(walls)
+        .filter(([_, wall]) => !wall)
+        .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
 
-            // Add to the routes array only when a new square is visited
-            routes.push({locPlayer, possibleDirections})
+        // Add to the routes array only when a new square is visited
+        routes.push({locPlayer, possibleDirections})
 
-            // console.log("Routes")
-            // console.log(routes)
-        }
+        // console.log("Routes")
+        // console.log(routes)
+    }
+
+    if (previousAction === "move") {
 
         if (possibleDirections.length > 1) {
 
@@ -134,21 +136,27 @@ const generateAction = (gameState: NoWayOutState): Action => {
             possibleDirections.splice(i, 1)
 
         } else {
-            // Only one possible direction. Go back or check if should reset?
+            // Only one possible direction. Use the only direction or check if should reset?
             newRotation = possibleDirections[0]
-            // console.log(possibleDirections)
         }
 
-        move = !move
+        if (newRotation === dirPlayer) {
 
-        return {
-            // TODO: Meneekö muuvi vaikka jatketaan suoraan?
-            action: 'rotate',
-            rotation: newRotation || 0,
+            return {
+                action: 'move',
+            }
+
+        } else {
+            previousAction = "rotate"
+            
+            return {
+                action: 'rotate',
+                rotation: newRotation || 0,
+            }
         }
-        
+
     } else {
-        move = !move
+        previousAction = "move"
 
         return {
             action: 'move',
