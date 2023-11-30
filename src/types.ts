@@ -68,7 +68,7 @@ export interface Messages {
 }
 
 export interface VisitedSquare {
-    position: Location;
+    locPlayer: Location;
     possibleDirections: Rotation[];
 }
   
