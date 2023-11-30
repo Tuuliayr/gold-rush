@@ -8,22 +8,19 @@ import { getWalls } from './utils/walls.js'
 
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
-const routes = []
+const routes: {locPlayer: Location, possibleDirections: Rotation[]}[] = []
 let move = false
 
 const getVisitedSquare = (locPlayer: Location) => {
-    routes.forEach(route => {
-        if (Object.values(route).includes(locPlayer)) {
-            // TODO: Testaa tuleeko täältä ikinä mitään.
-            return route
+
+   for (let i = 0; i < routes.length; i++) {
+        if (routes[i].locPlayer.x === locPlayer.x && routes[i].locPlayer.y === locPlayer.y) {
+            return routes[i];
         }
-    })
+    }
 
     return undefined
-
 }
-
-// Change this to your own implementation
 
 // If two walls missing side by side, add possible direction to array.
 // If wall is in front of us, don't go back. So no 180 rotation, if more than one spot is open.
@@ -32,34 +29,27 @@ const getVisitedSquare = (locPlayer: Location) => {
 const generateAction = (gameState: NoWayOutState): Action => {
     const { player, square } = gameState
     const { rotation } = player
-
     const walls = getWalls(square)
+    const locPlayer: Location = gameState.player.position
+    const locTarget = gameState.target
 
     // Check directions in every square
     if (!move) {
-        const locPlayer: Location = gameState.player.position
-        const locTarget = gameState.target
         const visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
         let possibleDirections: Rotation[]
+        let newRotation: Rotation
+        console.log(visitedSquare)
 
-        console.log(locPlayer)
-        console.log(locTarget)
-
-        if (visitedSquare) {
+        if (visitedSquare !== undefined) {
             possibleDirections = visitedSquare.possibleDirections
-            console.log("Directions from routes")
-            console.log()
         } else {
             // Check directions with no wall
             possibleDirections = Object.entries(walls)
             .filter(([_, wall]) => !wall)
             .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
 
-            // console.log("Possible directions")
-            // console.log(possibleDirections)
+            routes.push({locPlayer, possibleDirections})
         }
-
-        let newRotation: Rotation
 
         if (possibleDirections.length > 1) {
 
@@ -68,14 +58,8 @@ const generateAction = (gameState: NoWayOutState): Action => {
                     let diagonal = possibleDirections[i] + 45 as Rotation
                     possibleDirections.push(diagonal)
                     possibleDirections.sort((a, b) => a - b)
-                    // console.log("possibleDirections")
-                    // console.log(possibleDirections)
-                    // console.log("Player position")
-                    // console.log(gameState.player.position)
                 }
             }
-
-            // example directions [0, 45, 90, 180]
 
             // Tallenna reitit
             // array jossa objekteja, jokaisen käydyn ruudun koordinaatit ja possible directions
@@ -141,34 +125,28 @@ const generateAction = (gameState: NoWayOutState): Action => {
                 }
             }
 
-            console.log("possibleDirections")
-            console.log(possibleDirections)
-            console.log("NewRotation")
-            console.log(newRotation)
+            // console.log("possibleDirections")
+            // console.log(possibleDirections)
+            // console.log("NewRotation")
+            // console.log(newRotation)
 
             // TODO: 
             const i = possibleDirections.indexOf(newRotation)
             possibleDirections.splice(i, 1)
 
-            // TODO: Pushaa vain kun ollaan uudessa ruudussa.
-            // Muuten korvaa Rotation array uudella
             routes.push({locPlayer, possibleDirections})
 
-            console.log("Routes")
-            console.log(routes)
+            // TODO: Pushaa vain kun ollaan uudessa ruudussa.
+            // Muuten korvaa Rotation array uudella
+            // if (!visitedSquare) {
+            //     routes.push({locPlayer, possibleDirections})
+            // } else {
+
+            // }
             
 
-            // Get player and target locations. Calculate
-            // Try to get as close to x and y coordinates
-            // level 1 [9,7]
-            // check in every square target location - player location = ?
-            // Try to go as far as possible on both axises. If diagonal is an option, use it.
-            
-            
-
-            // if player.x < target.x go forward
-            
-            // newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
+            // console.log("Routes")
+            // console.log(routes)
 
         } else {
             // Only one possible direction. Go back or check if should reset?
