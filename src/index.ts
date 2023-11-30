@@ -48,7 +48,11 @@ const generateAction = (gameState: NoWayOutState): Action => {
             .filter(([_, wall]) => !wall)
             .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
 
+            // Add to the routes array only when a new square is visited
             routes.push({locPlayer, possibleDirections})
+
+            // console.log("Routes")
+            // console.log(routes)
         }
 
         if (possibleDirections.length > 1) {
@@ -125,28 +129,9 @@ const generateAction = (gameState: NoWayOutState): Action => {
                 }
             }
 
-            // console.log("possibleDirections")
-            // console.log(possibleDirections)
-            // console.log("NewRotation")
-            // console.log(newRotation)
-
-            // TODO: 
+            // Delete visited direction from possibleDirections
             const i = possibleDirections.indexOf(newRotation)
             possibleDirections.splice(i, 1)
-
-            routes.push({locPlayer, possibleDirections})
-
-            // TODO: Pushaa vain kun ollaan uudessa ruudussa.
-            // Muuten korvaa Rotation array uudella
-            // if (!visitedSquare) {
-            //     routes.push({locPlayer, possibleDirections})
-            // } else {
-
-            // }
-            
-
-            // console.log("Routes")
-            // console.log(routes)
 
         } else {
             // Only one possible direction. Go back or check if should reset?
