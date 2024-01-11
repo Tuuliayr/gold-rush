@@ -35,12 +35,12 @@ const generateAction = (gameState: NoWayOutState): Action => {
     const locTarget = gameState.target
 
     // Check directions in every square
-    const visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
+    let visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
     // object with possible directions and boolean if the rotation has been used
     let possibleRotations: PossibleRotation[]
     let newRotation: Rotation
 
-    if (visitedSquare !== undefined) {
+    if (visitedSquare) {
         possibleRotations = visitedSquare.possibleRotations
     } else {
         // Check possibleRotations with no wall
@@ -49,6 +49,7 @@ const generateAction = (gameState: NoWayOutState): Action => {
         .map(([rotation]) => { return { rotation: parseInt(rotation), isUsed: false} as PossibleRotation }).sort((a, b) => a.rotation - b.rotation)
 
         // Add to the visitedSquares array only when a new square is visited
+        visitedSquare = {locPlayer, possibleRotations};
         visitedSquares.push({locPlayer, possibleRotations})
     }
 
@@ -71,6 +72,7 @@ const generateAction = (gameState: NoWayOutState): Action => {
         // console.log(possibleRotations)
         // console.log("Final rotations")
         // console.log(finalRotations)
+        // console.log(visitedSquares)
 
         if (finalRotations.length === 0) {
 
@@ -113,29 +115,30 @@ const generateAction = (gameState: NoWayOutState): Action => {
                 return (Math.abs(curr.rotation - angleDeg) < Math.abs(prev.rotation - angleDeg) ? curr : prev);
             });
 
-            console.log("Player location")
-            console.log(locPlayer)
-            console.log("Target location")
-            console.log(locTarget)
-            console.log("Angle from player to goal")
-            console.log(angleDeg)
-            console.log("Closest angle from possible rotations")
-            console.log(closestRotation)
+            // console.log("Player location")
+            // console.log(locPlayer)
+            // console.log("Target location")
+            // console.log(locTarget)
+            // console.log("Angle from player to goal")
+            // console.log(angleDeg)
+            // console.log("Closest angle from possible rotations")
+            // console.log(closestRotation)
 
             // console.log("Closest rotation")
             // console.log(closestRotation.rotation);
 
-            // if (closestRotation.isUsed = false) {
-            //     // Edit isUsed to true for selected newRotation
-            //     for (let i = 0; i < possibleRotations.length - 1; i++) {
-            //         if (possibleRotations[i].rotation === closestRotation.rotation) {
-            //             possibleRotations[i].isUsed = true
-            //         }
-            //     }
-            //     newRotation = closestRotation.rotation
-            // }
-
             newRotation = closestRotation.rotation
+
+            if (!closestRotation.isUsed) {
+                // Edit isUsed to true for selected newRotation
+                for (let i = 0; i < visitedSquare.possibleRotations.length - 1; i++) {
+                    if (visitedSquare.possibleRotations[i].rotation === closestRotation.rotation) {
+                        visitedSquare.possibleRotations[i].isUsed = true
+                    }
+                }
+            }
+
+            console.log(visitedSquare.possibleRotations)
 
             // TODO: Selvintä tulosuunta. Poista tulosuunta rotationeista. Reset jos vaihtoehdot loppuu.
         
