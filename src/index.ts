@@ -2,20 +2,20 @@ import 'dotenv/config'
 import fetch from 'node-fetch'
 import open from 'open'
 import WebSocket from 'ws'
-import { Action, GameInstance, Location, Message, NoWayOutState, Rotation, VisitedSquare } from './types.js'
+import { Action, GameInstance, Location, Message, NoWayOutState, PossibleRotation, Rotation, VisitedSquare } from './types.js'
 import { message } from './utils/message.js'
 import { getWalls } from './utils/walls.js'
 
 const frontend_base = 'goldrush.monad.fi'
 const backend_base = 'goldrush.monad.fi/backend'
-const routes: {locPlayer: Location, possibleDirections: Rotation[]}[] = []
+const visitedSquares: VisitedSquare[] = []
 let previousAction: "move" | "rotate" = "move"
 
 const getVisitedSquare = (locPlayer: Location) => {
 
-   for (let i = 0; i < routes.length; i++) {
-        if (routes[i].locPlayer.x === locPlayer.x && routes[i].locPlayer.y === locPlayer.y) {
-            return routes[i];
+   for (let i = 0; i < visitedSquares.length; i++) {
+        if (visitedSquares[i].locPlayer.x === locPlayer.x && visitedSquares[i].locPlayer.y === locPlayer.y) {
+            return visitedSquares[i];
         }
     }
 
@@ -36,36 +36,62 @@ const generateAction = (gameState: NoWayOutState): Action => {
 
     // Check directions in every square
     const visitedSquare: VisitedSquare = getVisitedSquare(locPlayer)
-    let possibleDirections: Rotation[]
+    // object with possible directions and boolean if the rotation has been used
+    let possibleRotations: PossibleRotation[]
     let newRotation: Rotation
-    console.log(visitedSquare)
 
     if (visitedSquare !== undefined) {
-        possibleDirections = visitedSquare.possibleDirections
+        possibleRotations = visitedSquare.possibleRotations
     } else {
-        // Check directions with no wall
-        possibleDirections = Object.entries(walls)
+        // Check possibleRotations with no wall
+        possibleRotations = Object.entries(walls)
         .filter(([_, wall]) => !wall)
-        .map(([rotation]) => parseInt(rotation) as Rotation).sort((a, b) => a - b)
+        .map(([rotation]) => { return { rotation: parseInt(rotation), isUsed: false} as PossibleRotation }).sort((a, b) => a.rotation - b.rotation)
 
-        // Add to the routes array only when a new square is visited
-        routes.push({locPlayer, possibleDirections})
-
-        // console.log("Routes")
-        // console.log(routes)
+        // Add to the visitedSquares array only when a new square is visited
+        visitedSquares.push({locPlayer, possibleRotations})
     }
 
     if (previousAction === "move") {
 
-        if (possibleDirections.length > 1) {
+        let dirPlayerEntry = dirPlayer < 180 ? dirPlayer + 180 : dirPlayer - 180
+        let finalRotations
 
-            for (let i = 0; i < possibleDirections.length - 1; i++) {
-                if (possibleDirections[i + 1] - possibleDirections[i] === 90) {
-                    let diagonal = possibleDirections[i] + 45 as Rotation
-                    possibleDirections.push(diagonal)
-                    possibleDirections.sort((a, b) => a - b)
-                }
+        if (locPlayer.x !== 0 && locPlayer.y !== 0) {
+            finalRotations = possibleRotations.filter((pr) => pr.rotation !== dirPlayerEntry)
+        } else {
+            finalRotations = possibleRotations
+        }
+
+        // let finalRotations = locPlayer.x !== 0 && locPlayer.y !== 0 ? possibleRotations.filter((pr) => pr.rotation !== dirPlayerEntry) : possibleRotations
+
+        // console.log("Player location")
+        // console.log(locPlayer)
+        // console.log("Possible rotations")
+        // console.log(possibleRotations)
+        // console.log("Final rotations")
+        // console.log(finalRotations)
+
+        if (finalRotations.length === 0) {
+
+            return {
+                action: 'reset'
             }
+
+        } else if (finalRotations.length === 1) {
+
+            newRotation = finalRotations[0].rotation
+            
+        } else {
+
+            // Kannattaako diagonaalit katsoa tässä?
+            // for (let i = 0; i < possibleRotations.length - 1; i++) {
+            //     if (possibleRotations[i + 1].rotation - possibleRotations[i].rotation === 90) {
+            //         let diagonalRotation: PossibleRotation = {rotation: possibleRotations[i].rotation + 45 as Rotation, isUsed: false}
+            //         possibleRotations.push(diagonalRotation)
+            //         possibleRotations.sort((a, b) => a.rotation - b.rotation)
+            //     }
+            // }
 
             // Tallenna reitit
             // array jossa objekteja, jokaisen käydyn ruudun koordinaatit ja possible directions
@@ -74,70 +100,53 @@ const generateAction = (gameState: NoWayOutState): Action => {
             // Jos nykykyinen koordinaatti löytyy routes koordinaateista käytä sen directioneita
 
             
-            // Narrow down possible directions
-            // don't go back if there are other options
-            // If player [x, y] < target [x, y] go down and right, optimal: [90, 135, 180]
-            // if player [x, y] > target [x, y] go up and left, optimal: [0, 270, 315]
-            // if player x < target x and y > x go up and right, optimal: [0, 45, 90]
-            // if player x > target x and y < x go down and left, optimal: [180, 225, 270]
 
-            if (locPlayer.x <= locTarget.x && locPlayer.y <= locTarget.y) {
-                if (possibleDirections.includes(135)) {
-                    newRotation = 135
-                } else if (possibleDirections.includes(90) && possibleDirections.includes(180)) {
-                    newRotation = Math.floor(Math.random() * (180 - 90 + 1) + 90) as Rotation
-                } else if (possibleDirections.includes(90)) {
-                    newRotation = 90
-                } else if (possibleDirections.includes(180)) {
-                    newRotation = 180
-                } else {
-                    newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
-                }
-            } else if (locPlayer.x >= locTarget.x && locPlayer.y >= locTarget.y) {
-                if (possibleDirections.includes(315)) {
-                    newRotation = 315
-                } else if (possibleDirections.includes(0) && possibleDirections.includes(270)) {
-                    newRotation = Math.floor(Math.random() * (270 + 1)) as Rotation
-                } else if (possibleDirections.includes(0)) {
-                    newRotation = 0
-                } else if (possibleDirections.includes(270)) {
-                    newRotation = 270
-                } else {
-                    newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
-                }
-            } else if (locPlayer.x <= locTarget.x && locPlayer.y >= locTarget.y) {
-                if (possibleDirections.includes(45)) {
-                    newRotation = 45
-                } else if (possibleDirections.includes(0) && possibleDirections.includes(90)) {
-                    newRotation = Math.floor(Math.random() * (90 + 1)) as Rotation
-                } else if (possibleDirections.includes(0)) {
-                    newRotation = 0
-                } else if (possibleDirections.includes(90)) {
-                    newRotation = 90
-                } else {
-                    newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
-                }
-            } else if (locPlayer.x >= locTarget.x && locPlayer.y <= locTarget.y) {
-                if (possibleDirections.includes(225)) {
-                    newRotation = 225
-                } else if (possibleDirections.includes(180) && possibleDirections.includes(270)) {
-                    newRotation = Math.floor(Math.random() * (270 - 180 + 1) + 180) as Rotation
-                } else if (possibleDirections.includes(180)) {
-                    newRotation = 180
-                } else if (possibleDirections.includes(270)) {
-                    newRotation = 270
-                } else {
-                    newRotation = possibleDirections[Math.floor(Math.random() * possibleDirections.length)]
-                }
-            }
+            // const hasValue = (obj, value) => Object.values(obj).includes(value)
 
-            // Delete visited direction from possibleDirections
-            const i = possibleDirections.indexOf(newRotation)
-            possibleDirections.splice(i, 1)
 
-        } else {
-            // Only one possible direction. Use the only direction or check if should reset?
-            newRotation = possibleDirections[0]
+            let angleDeg = Math.abs(Math.atan2(locTarget.y - locPlayer.y, locTarget.x - locPlayer.x) * (180 / Math.PI) + 90)
+
+            // console.log("Angle in degrees")
+            // console.log(angleDeg)
+
+            let closestRotation = finalRotations.reduce(function(prev, curr) {
+                return (Math.abs(curr.rotation - angleDeg) < Math.abs(prev.rotation - angleDeg) ? curr : prev);
+            });
+
+            console.log("Player location")
+            console.log(locPlayer)
+            console.log("Target location")
+            console.log(locTarget)
+            console.log("Angle from player to goal")
+            console.log(angleDeg)
+            console.log("Closest angle from possible rotations")
+            console.log(closestRotation)
+
+            // console.log("Closest rotation")
+            // console.log(closestRotation.rotation);
+
+            // if (closestRotation.isUsed = false) {
+            //     // Edit isUsed to true for selected newRotation
+            //     for (let i = 0; i < possibleRotations.length - 1; i++) {
+            //         if (possibleRotations[i].rotation === closestRotation.rotation) {
+            //             possibleRotations[i].isUsed = true
+            //         }
+            //     }
+            //     newRotation = closestRotation.rotation
+            // }
+
+            newRotation = closestRotation.rotation
+
+            // TODO: Selvintä tulosuunta. Poista tulosuunta rotationeista. Reset jos vaihtoehdot loppuu.
+        
+
+            // [{{1,2}, [{90, true}, {180, false}, {0, false}]}, {{2,2}, [{90, true}, {180, false}, {0, false}]}]
+
+            // const i = possibleDirections.indexOf(newRotation)
+            // possibleDirections.splice(i, 1)
+
+            // If isUsed is false, use as newRotation
+            // else pick another one
         }
 
         if (newRotation === dirPlayer) {
