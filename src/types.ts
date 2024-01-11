@@ -9,6 +9,11 @@ export type Player = {
     position: Location
     rotation: Rotation
 }
+
+export type PossibleRotation = {
+    rotation: Rotation
+    isUsed: boolean
+}
   
 export interface NoWayOutState {
     player: Player
@@ -23,13 +28,13 @@ export interface NoWayOutState {
 }
   
 export type Action =
-    | {
+    |   {
         action: 'move' | 'reset'
-      }
-    | {
+        }
+    |   {
         action: 'rotate'
         rotation: Rotation
-      }
+        }
   
 export interface GameInstance {
     gameState: string
@@ -44,32 +49,32 @@ export type ErrType = 'Forbidden' | 'Internal Server Error' | 'Bad Request'
   
 export interface Messages {
     'sub-game': {
-      id: string
+        id: string
     }
     'game-instance': {
-      gameState: string
-      status: string
-      reason: string
-      createdAt: Date
-      gameType: string
-      entityId: string
+        gameState: string
+        status: string
+        reason: string
+        createdAt: Date
+        gameType: string
+        entityId: string
     }
     'run-command': {
-      gameId: string
-      payload: Action
+        gameId: string
+        payload: Action
     }
     success: {
-      message: string
+        message: string
     }
     failure: {
-      reason: ErrType
-      desc?: string
+        reason: ErrType
+        desc?: string
     }
 }
 
 export interface VisitedSquare {
-    locPlayer: Location;
-    possibleDirections: Rotation[];
+    locPlayer: Location
+    possibleRotations: PossibleRotation[]
 }
   
 export type AllowedActions = keyof Messages
