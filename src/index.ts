@@ -49,8 +49,8 @@ const generateAction = (gameState: NoWayOutState): Action => {
         .map(([rotation]) => { return { rotation: parseInt(rotation), isUsed: false} as PossibleRotation }).sort((a, b) => a.rotation - b.rotation)
 
         // Add to the visitedSquares array only when a new square is visited
-        visitedSquare = {locPlayer, possibleRotations};
-        visitedSquares.push({locPlayer, possibleRotations})
+        visitedSquare = {locPlayer, visitedThisRun: false, possibleRotations};
+        visitedSquares.push({locPlayer, visitedThisRun: true, possibleRotations})
     }
 
     if (previousAction === "move") {
@@ -58,12 +58,13 @@ const generateAction = (gameState: NoWayOutState): Action => {
         let dirPlayerEntry = dirPlayer < 180 ? dirPlayer + 180 : dirPlayer - 180
         let finalRotations
 
-        if (locPlayer.x !== 0 && locPlayer.y !== 0) {
-            finalRotations = possibleRotations.filter((pr) => pr.rotation !== dirPlayerEntry)
-        } else {
+        if (locPlayer.x === 0 && locPlayer.y === 0) {
             finalRotations = possibleRotations
+        } else {
+            finalRotations = possibleRotations.filter((pr) => pr.rotation !== dirPlayerEntry)
         }
-
+    
+    
         // let finalRotations = locPlayer.x !== 0 && locPlayer.y !== 0 ? possibleRotations.filter((pr) => pr.rotation !== dirPlayerEntry) : possibleRotations
 
         // console.log("Player location")
@@ -74,18 +75,35 @@ const generateAction = (gameState: NoWayOutState): Action => {
         // console.log(finalRotations)
         // console.log(visitedSquares)
 
-        if (finalRotations.length === 0) {
+        console.log(visitedSquare.visitedThisRun);
+
+        if (finalRotations.length === 0 || visitedSquare.visitedThisRun) {
+            let routeBlocked = false
+
+            for (let i = visitedSquares.length - 1; i >= 0; i--) {
+                if (routeBlocked) break
+                if (visitedSquares[i].possibleRotations.length > 2) {
+                    for (let j = 0; j < visitedSquares[i].possibleRotations.length; j++) {
+                        if (visitedSquares[i].possibleRotations[j].isUsed) {
+                            visitedSquares[i].possibleRotations.splice(j, 1)
+                            routeBlocked = true
+                        }
+                    }
+                }
+            }
+
+            visitedSquares.forEach(s => s.visitedThisRun = false)
 
             return {
                 action: 'reset'
             }
 
         } else if (finalRotations.length === 1) {
-
+            visitedSquare.visitedThisRun = true;
             newRotation = finalRotations[0].rotation
             
         } else {
-
+            visitedSquare.visitedThisRun = true;
             // Kannattaako diagonaalit katsoa tässä?
             // for (let i = 0; i < possibleRotations.length - 1; i++) {
             //     if (possibleRotations[i + 1].rotation - possibleRotations[i].rotation === 90) {
@@ -131,25 +149,18 @@ const generateAction = (gameState: NoWayOutState): Action => {
 
             if (!closestRotation.isUsed) {
                 // Edit isUsed to true for selected newRotation
-                for (let i = 0; i < visitedSquare.possibleRotations.length - 1; i++) {
+                for (let i = 0; i < visitedSquare.possibleRotations.length; i++) {
                     if (visitedSquare.possibleRotations[i].rotation === closestRotation.rotation) {
                         visitedSquare.possibleRotations[i].isUsed = true
                     }
                 }
             }
 
-            console.log(visitedSquare.possibleRotations)
+            // console.log(visitedSquare.possibleRotations)
 
-            // TODO: Selvintä tulosuunta. Poista tulosuunta rotationeista. Reset jos vaihtoehdot loppuu.
-        
+            // TODO: Loop visitedSquares backwards until square has more than 2 possible rotations. Remove the rotation (from visitedSquare) where everything went wrong
 
-            // [{{1,2}, [{90, true}, {180, false}, {0, false}]}, {{2,2}, [{90, true}, {180, false}, {0, false}]}]
-
-            // const i = possibleDirections.indexOf(newRotation)
-            // possibleDirections.splice(i, 1)
-
-            // If isUsed is false, use as newRotation
-            // else pick another one
+            
         }
 
         if (newRotation === dirPlayer) {
