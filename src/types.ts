@@ -74,6 +74,7 @@ export interface Messages {
 
 export interface VisitedSquare {
     locPlayer: Location
+    visitedThisRun: boolean
     possibleRotations: PossibleRotation[]
 }
   
