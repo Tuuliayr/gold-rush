@@ -23,7 +23,7 @@ class GameService {
             return null
         }
     
-        return res.json() as any as GameInstance // Can be made safer
+        return res.json() as any as GameInstance
     }
 
     startGame = async () => {
@@ -38,7 +38,7 @@ class GameService {
     
         const url = `https://${frontend_base}/?id=${game.entityId}`
         console.log(`Game at ${url}`)
-        await open(url) // Remove this if you don't want to open the game in browser
+        await open(url)
     
         await new Promise((f) => setTimeout(f, 2000))
         const ws = new WebSocket(`wss://${backend_base}/${token}/`)
@@ -51,16 +51,15 @@ class GameService {
             const [action, payload] = JSON.parse(data.toString()) as Message<'game-instance'>
     
             if (action !== 'game-instance') {
-            console.log([action, payload])
-            return
+                console.log([action, payload])
+                return
             }
     
-            // New game tick arrived!
             const gameState = JSON.parse(payload['gameState']) as NoWayOutState
             const commands = actionService.generateAction(gameState)
     
             setTimeout(() => {
-            ws.send(message('run-command', { gameId: game.entityId, payload: commands }))
+                ws.send(message('run-command', { gameId: game.entityId, payload: commands }))
             }, 100)
         })
     }
